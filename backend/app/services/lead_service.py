@@ -19,6 +19,10 @@ def create_lead(data: dict):
 
     # Normalisation
     data["company_name"] = normalize_text(data.get("company_name"))
+
+    if not data.get("company_name"):
+        raise ValueError("Le nom de l'entreprise est requis.")
+
     data["sector"] = normalize_text(data.get("sector"))
     data["country"] = normalize_text(data.get("country"))
     data["city"] = normalize_text(data.get("city"))

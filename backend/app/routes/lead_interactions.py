@@ -1,5 +1,4 @@
-from fastapi import APIRouter, HTTPException
-
+from fastapi import APIRouter, HTTPException, Request
 from app.schemas.lead_interaction import LeadInteractionCreate
 from app.services.lead_interaction_service import (
     create_lead_interaction,

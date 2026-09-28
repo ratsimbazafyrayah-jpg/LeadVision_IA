@@ -13,21 +13,84 @@ EVIDENCE_WEIGHT = 0.15
 
 def _calculate_intent(signals: List[Dict[str, Any]]) -> float:
     """
-    Mesure l'intensité observable de l'intention commerciale
-    à partir du nombre de signaux commerciaux validés.
+    Mesure l'intensité observable des signaux commerciaux validés.
 
-    Aucun point fixe n'est attribué à un type de signal.
-    La mesure est normalisée sur le nombre de signaux observés.
+    L'Intent V1 combine:
+    - volume des signaux: 40 %
+    - diversité des types de signaux: 30 %
+    - récurrence temporelle: 30 %
+
+    Le score ne représente pas une probabilité d'achat.
     """
+
     if not signals:
         return 0.0
 
     signal_count = len(signals)
 
-    # Saturation progressive : plus il existe de signaux valides,
-    # plus l'intention observée augmente, sans dépasser 100.
+    # Volume avec rendement décroissant.
+    volume = 100.0 * signal_count / (signal_count + 1.0)
+
+    # Les types disponibles sont ceux définis par les règles
+    # commerciales de LeadVision_IA.
+    allowed_signal_types = {
+        "form_submission",
+        "email_reply",
+        "meeting_booked",
+        "demo_request",
+        "quote_request",
+        "contact_request",
+    }
+
+    signal_types = {
+        signal.get("signal_type")
+        for signal in signals
+        if signal.get("signal_type") in allowed_signal_types
+    }
+
+    diversity = (
+        100.0 * len(signal_types) / len(allowed_signal_types)
+        if signal_types
+        else 0.0
+    )
+
+    # Récurrence observée sur une fenêtre de 90 jours.
+    # Les dates sont normalisées en UTC et les dates civiles
+    # distinctes représentent les jours d'activité observée.
+    active_days = set()
+
+    for signal in signals:
+        occurred_at = signal.get("occurred_at")
+
+        if not isinstance(occurred_at, datetime):
+            continue
+
+        if occurred_at.tzinfo is None:
+            occurred_at = occurred_at.replace(tzinfo=timezone.utc)
+
+        age_days = (
+            datetime.now(timezone.utc) - occurred_at
+        ).total_seconds() / 86400
+
+        if 0 <= age_days <= 90:
+            active_days.add(occurred_at.date())
+
+    if len(active_days) <= 1:
+        recurrence = 0.0
+    else:
+        recurrence = min(
+            100.0,
+            100.0 * (len(active_days) - 1) / 89.0,
+        )
+
+    intent = (
+        (volume * 0.40)
+        + (diversity * 0.30)
+        + (recurrence * 0.30)
+    )
+
     return round(
-        min(100.0, signal_count * 25.0),
+        max(0.0, min(100.0, intent)),
         2,
     )
 
@@ -78,22 +141,43 @@ def _calculate_diversity(signals: List[Dict[str, Any]]) -> float:
     """
     Mesure la diversité des sources commerciales observées.
 
-    Une seule source = 1 source observée.
-    Plusieurs sources indépendantes augmentent la diversité.
+    La diversité est calculée à partir de la répartition réelle
+    des signaux entre les différentes sources.
 
-    Maximum méthodologique actuel : 5 sources distinctes.
+    Méthode :
+    Diversity = (1 - HHI) * 100
+
+    où HHI = somme des carrés des parts de chaque source.
+
+    Une seule source dominante produit une diversité de 0.
+    Une répartition plus équilibrée entre plusieurs sources
+    produit une diversité plus élevée.
     """
-    sources = {
+    sources = [
         signal.get("source")
         for signal in signals
         if signal.get("source")
-    }
+    ]
 
     if not sources:
         return 0.0
 
+    total = len(sources)
+
+    source_counts = {}
+
+    for source in sources:
+        source_counts[source] = source_counts.get(source, 0) + 1
+
+    hhi = sum(
+        (count / total) ** 2
+        for count in source_counts.values()
+    )
+
+    diversity = (1.0 - hhi) * 100.0
+
     return round(
-        min(100.0, (len(sources) / 5.0) * 100.0),
+        max(0.0, min(100.0, diversity)),
         2,
     )
 
@@ -214,7 +298,7 @@ def calculate_commercial_score(
     return {
         "commercial_score": commercial_score,
         "status": "score_available",
-        "confidence": evidence,
+        "confidence": None,
         "signals_used": [
             signal.get("interaction_id")
             for signal in valid_signals

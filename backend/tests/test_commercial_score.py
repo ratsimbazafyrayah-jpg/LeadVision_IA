@@ -176,3 +176,73 @@ def test_old_signal_affects_recency():
     ])
 
     assert recent_result["calculation"]["dimensions"]["recency"] > old_result["calculation"]["dimensions"]["recency"]
+
+
+def test_intent_is_not_based_on_fixed_25_point_steps():
+    signals = [
+        {
+            "interaction_id": f"signal-{i}",
+            "signal_type": "form_submission",
+            "source": "website",
+            "occurred_at": datetime.now(timezone.utc),
+            "validation_reason": "validated_form_event",
+        }
+        for i in range(1, 5)
+    ]
+
+    result = calculate_commercial_score(signals)
+
+    intent = result["calculation"]["dimensions"]["intent"]
+
+    assert intent not in {25.0, 50.0, 75.0, 100.0}
+
+
+
+
+def test_diversity_is_zero_when_all_signals_use_one_source():
+    signals = [
+        {
+            "interaction_id": "signal-001",
+            "signal_type": "form_submission",
+            "source": "website",
+            "occurred_at": datetime.now(timezone.utc),
+            "validation_reason": "validated_form_event",
+        },
+        {
+            "interaction_id": "signal-002",
+            "signal_type": "email_reply",
+            "source": "website",
+            "occurred_at": datetime.now(timezone.utc),
+            "validation_reason": "validated_email_event",
+        },
+    ]
+
+    result = calculate_commercial_score(signals)
+
+    assert result["calculation"]["dimensions"]["diversity"] == 0.0
+
+
+def test_diversity_increases_when_signals_are_distributed_across_sources():
+    signals = [
+        {
+            "interaction_id": "signal-001",
+            "signal_type": "form_submission",
+            "source": "website",
+            "occurred_at": datetime.now(timezone.utc),
+            "validation_reason": "validated_form_event",
+        },
+        {
+            "interaction_id": "signal-002",
+            "signal_type": "email_reply",
+            "source": "email",
+            "occurred_at": datetime.now(timezone.utc),
+            "validation_reason": "validated_email_event",
+        },
+    ]
+
+    result = calculate_commercial_score(signals)
+
+    diversity = result["calculation"]["dimensions"]["diversity"]
+
+    assert diversity > 0.0
+    assert diversity <= 100.0

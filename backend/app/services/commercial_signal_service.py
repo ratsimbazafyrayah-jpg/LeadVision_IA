@@ -57,5 +57,4 @@ def analyze_commercial_signals(
         "signal_count": len(signals),
         "signals": signals,
         "ignored_interactions": ignored_interactions,
-        "commercial_score": None,
     }
