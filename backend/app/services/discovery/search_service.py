@@ -7,6 +7,7 @@ from app.services.discovery.query_builder import build_discovery_query
 def search_prospects(
     request: DiscoverySearchRequest,
     source: Any,
+    geocoder: Any = None,
 ) -> Dict[str, Any]:
     if source is None:
         raise ValueError("La source de découverte est requise.")
@@ -25,9 +26,27 @@ def search_prospects(
 
     discovery_query = build_discovery_query(request)
 
+    discovery_context = {
+        **filters,
+        "search_query": request.query,
+    }
+
+    if geocoder is not None:
+        geocoding_result = geocoder.geocode(
+            country=request.country,
+            city=request.city,
+            region=request.region,
+        )
+
+        if isinstance(geocoding_result, dict):
+            boundingbox = geocoding_result.get("boundingbox")
+
+            if isinstance(boundingbox, dict):
+                discovery_context["boundingbox"] = boundingbox
+
     prospects: Iterable[Dict[str, Any]] = source.discover(
         discovery_query,
-        context=filters,
+        context=discovery_context,
     )
     prospects = list(prospects)
 

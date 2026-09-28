@@ -21,6 +21,9 @@ class Settings:
     geoapify_api_key: Optional[str]
     geoapify_base_url: str
 
+    nominatim_base_url: str
+    nominatim_timeout: float
+
 
 @lru_cache
 def get_settings() -> Settings:
@@ -49,5 +52,12 @@ def get_settings() -> Settings:
         geoapify_base_url=os.getenv(
             "GEOAPIFY_BASE_URL",
             "https://api.geoapify.com",
+        ),
+        nominatim_base_url=os.getenv(
+            "NOMINATIM_BASE_URL",
+            "https://nominatim.openstreetmap.org",
+        ),
+        nominatim_timeout=float(
+            os.getenv("NOMINATIM_TIMEOUT", "15.0")
         ),
     )

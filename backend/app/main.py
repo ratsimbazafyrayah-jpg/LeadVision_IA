@@ -1,6 +1,8 @@
 from contextlib import asynccontextmanager
 
+import httpx
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.database.mongodb import check_database_connection
 from app.routes.leads import router as leads_router
@@ -11,6 +13,7 @@ from app.routes.discovery import router as discovery_router
 from app.services.ai.ai_provider_factory import create_ai_provider
 from app.services.discovery.source_factory import build_discovery_sources
 from app.services.discovery.source_registry import DiscoverySourceRegistry
+from app.services.discovery.nominatim_geocoding import NominatimGeocodingService
 
 
 @asynccontextmanager
@@ -19,6 +22,17 @@ async def lifespan(app: FastAPI):
 
     discovery_sources = build_discovery_sources()
     app.state.discovery_sources = DiscoverySourceRegistry(discovery_sources)
+
+    nominatim_http_client = httpx.Client(
+        headers={
+            "User-Agent": "LeadVision_IA/1.0 (academic project)",
+            "Accept": "application/json",
+        }
+    )
+
+    app.state.nominatim_geocoder = NominatimGeocodingService(
+        http_client=nominatim_http_client,
+    )
 
     try:
         yield
@@ -41,12 +55,35 @@ async def lifespan(app: FastAPI):
         if discovery_sources is not None:
             discovery_sources.close()
 
+        nominatim_geocoder = getattr(
+            app.state,
+            "nominatim_geocoder",
+            None,
+        )
+
+        if nominatim_geocoder is not None:
+            nominatim_geocoder.close()
+
 
 app = FastAPI(
     title="LeadVision_IA API",
     description="API de prospection intelligente",
     version="1.0.0",
     lifespan=lifespan,
+)
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:5174",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
@@ -62,7 +99,7 @@ app.include_router(discovery_router)
 def root():
     return {
         "application": "LeadVision_IA",
-        "status": "online"
+        "status": "online",
     }
 
 
@@ -72,5 +109,5 @@ def health():
 
     return {
         "api": "ok",
-        "mongodb": "connected" if mongodb_status else "disconnected"
+        "mongodb": "connected" if mongodb_status else "disconnected",
     }

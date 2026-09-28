@@ -18,6 +18,9 @@ def build_discovery_sources():
     sources = [
         OverpassDiscoverySource(
             http_client=http_client,
+            fallback_endpoints=[
+                "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
+            ],
         )
     ]
 

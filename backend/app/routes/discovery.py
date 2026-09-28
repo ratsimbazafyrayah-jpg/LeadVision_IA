@@ -18,10 +18,16 @@ def discovery_search(
 ):
     try:
         source = request.app.state.discovery_sources.get(payload.source)
+        geocoder = getattr(
+            request.app.state,
+            "nominatim_geocoder",
+            None,
+        )
 
         return search_prospects(
             request=payload,
             source=source,
+            geocoder=geocoder,
         )
     except ValueError as error:
         raise HTTPException(
