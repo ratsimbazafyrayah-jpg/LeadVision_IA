@@ -7,7 +7,7 @@ def test_discovery_search_endpoint_returns_search_result():
     class FakeSource:
         name = "overpass"
 
-        def discover(self, query):
+        def discover(self, query, context=None):
             return [
                 {
                     "company_name": "Example Company",

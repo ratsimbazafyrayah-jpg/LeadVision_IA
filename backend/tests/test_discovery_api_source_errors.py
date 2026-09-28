@@ -7,7 +7,7 @@ def test_discovery_search_handles_source_failure():
     class FailingSource:
         name = "overpass"
 
-        def discover(self, query):
+        def discover(self, query, context=None):
             raise RuntimeError("Discovery source unavailable.")
 
     class FakeRegistry:

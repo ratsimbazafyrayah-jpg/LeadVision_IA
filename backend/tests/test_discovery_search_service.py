@@ -7,7 +7,7 @@ class FakeSource:
     def name(self):
         return "fake"
 
-    def discover(self, query):
+    def discover(self, query, context=None):
         return [
             {
                 "company_name": "Entreprise trouvée",

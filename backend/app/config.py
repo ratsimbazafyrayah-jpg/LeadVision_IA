@@ -18,6 +18,9 @@ class Settings:
     openrouter_base_url: str
     openrouter_model: Optional[str]
 
+    geoapify_api_key: Optional[str]
+    geoapify_base_url: str
+
 
 @lru_cache
 def get_settings() -> Settings:
@@ -42,4 +45,9 @@ def get_settings() -> Settings:
             "https://openrouter.ai/api/v1",
         ),
         openrouter_model=os.getenv("OPENROUTER_MODEL"),
+        geoapify_api_key=os.getenv("GEOAPIFY_API_KEY"),
+        geoapify_base_url=os.getenv(
+            "GEOAPIFY_BASE_URL",
+            "https://api.geoapify.com",
+        ),
     )

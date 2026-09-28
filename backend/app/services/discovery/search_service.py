@@ -26,7 +26,8 @@ def search_prospects(
     discovery_query = build_discovery_query(request)
 
     prospects: Iterable[Dict[str, Any]] = source.discover(
-        discovery_query
+        discovery_query,
+        context=filters,
     )
     prospects = list(prospects)
 

@@ -34,18 +34,35 @@ class OverpassDiscoverySource(DiscoverySource):
     def name(self) -> str:
         return "overpass"
 
-    def discover(self, query: str) -> Iterable[Dict[str, Any]]:
+    def discover(
+        self,
+        query: str,
+        context: Dict[str, Any] | None = None,
+    ) -> Iterable[Dict[str, Any]]:
         if not query or not query.strip():
             raise ValueError("La requête de découverte est requise.")
 
         overpass_query = self._build_query(query.strip())
 
-        response = self.http_client.post(
-            self.endpoint,
-            data=overpass_query,
-            timeout=self.timeout,
-        )
-        response.raise_for_status()
+        try:
+            response = self.http_client.post(
+                self.endpoint,
+                data=overpass_query,
+                timeout=self.timeout,
+            )
+            response.raise_for_status()
+        except httpx.TimeoutException as exc:
+            raise RuntimeError(
+                "La source Overpass a dépassé le délai d'attente."
+            ) from exc
+        except httpx.HTTPStatusError as exc:
+            raise RuntimeError(
+                "La source Overpass a retourné une erreur HTTP."
+            ) from exc
+        except httpx.RequestError as exc:
+            raise RuntimeError(
+                "La source Overpass est indisponible."
+            ) from exc
 
         payload = response.json()
 

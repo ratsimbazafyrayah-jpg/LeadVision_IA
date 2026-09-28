@@ -49,3 +49,22 @@ def test_registry_closes_registered_source_clients():
     registry.close()
 
     assert source.closed is True
+
+def test_registry_supports_multiple_discovery_sources():
+    class GeoapifySource:
+        @property
+        def name(self):
+            return "geoapify"
+
+    class OverpassSource:
+        @property
+        def name(self):
+            return "overpass"
+
+    overpass = OverpassSource()
+    geoapify = GeoapifySource()
+
+    registry = DiscoverySourceRegistry([overpass, geoapify])
+
+    assert registry.get("overpass") is overpass
+    assert registry.get("geoapify") is geoapify

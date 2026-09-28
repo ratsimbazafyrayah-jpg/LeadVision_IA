@@ -8,7 +8,7 @@ class FakeSource:
     def __init__(self):
         self.received_query = None
 
-    def discover(self, query):
+    def discover(self, query, context=None):
         self.received_query = query
         return []
 

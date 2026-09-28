@@ -16,5 +16,9 @@ class DiscoverySource(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def discover(self, query: str) -> Iterable[Dict[str, Any]]:
+    def discover(
+        self,
+        query: str,
+        context: Dict[str, Any] | None = None,
+    ) -> Iterable[Dict[str, Any]]:
         raise NotImplementedError
