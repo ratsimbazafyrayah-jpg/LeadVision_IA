@@ -41,6 +41,18 @@ def test_invalid_phone():
     assert validate_phone("abc123") is False
 
 
+def test_valid_multiple_phones():
+    assert validate_phone(
+        "+261 (20) 226 42 33 / +261 (20) 248 03 49"
+    ) is True
+
+
+def test_invalid_multiple_phones():
+    assert validate_phone(
+        "+261341111111 / abc123"
+    ) is False
+
+
 def test_valid_social_media():
     result = validate_social_media({
         "facebook": "https://facebook.com/example",

@@ -61,11 +61,15 @@ def validate_phone(phone):
     if not phone:
         return True
 
-    cleaned = re.sub(r"[\s\-\(\)]", "", phone)
-
+    numbers = re.split(r"\s*(?:/|,|;)\s*", phone.strip())
     pattern = r"^\+?[0-9]{7,15}$"
 
-    return bool(re.match(pattern, cleaned))
+    for number in numbers:
+        cleaned = re.sub(r"[\s\-\(\)]", "", number)
+        if not cleaned or not re.match(pattern, cleaned):
+            return False
+
+    return True
 
 def validate_social_media(social_media):
     if not social_media:
