@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from bson import ObjectId
 
 from app.database.mongodb import db
@@ -8,6 +9,8 @@ from app.services.lead_validation_service import (
     normalize_url,
     validate_email,
     validate_url,
+    validate_phone,
+    validate_social_media,
     find_duplicate_lead,
 )
 
@@ -65,6 +68,127 @@ def create_lead(data: dict):
         "duplicate": False,
         "lead": document,
     }
+
+
+def update_lead(lead_id: str, data: dict):
+    if not ObjectId.is_valid(lead_id):
+        raise ValueError("Identifiant du lead invalide")
+
+    if not isinstance(data, dict):
+        raise ValueError("Les données du lead sont invalides.")
+
+    existing = leads_collection.find_one({
+        "_id": ObjectId(lead_id)
+    })
+
+    if not existing:
+        return None
+
+    update_data = {}
+
+    allowed_fields = {
+        "company_name",
+        "sector",
+        "country",
+        "city",
+        "website",
+        "email",
+        "phone",
+        "social_media",
+        "source",
+        "status",
+        "notes",
+    }
+
+    for field in allowed_fields:
+        if field in data:
+            update_data[field] = data[field]
+
+    if "company_name" in update_data:
+        update_data["company_name"] = normalize_text(
+            update_data["company_name"]
+        )
+        if not update_data["company_name"]:
+            raise ValueError("Le nom de l'entreprise est requis.")
+
+    if "sector" in update_data:
+        update_data["sector"] = normalize_text(update_data["sector"])
+
+    if "country" in update_data:
+        update_data["country"] = normalize_text(update_data["country"])
+
+    if "city" in update_data:
+        update_data["city"] = normalize_text(update_data["city"])
+
+    final_company_name = update_data.get(
+        "company_name",
+        existing.get("company_name"),
+    )
+    final_city = update_data.get(
+        "city",
+        existing.get("city"),
+    )
+
+    if final_company_name and final_city:
+        duplicate = leads_collection.find_one({
+            "company_name": final_company_name,
+            "city": final_city,
+            "_id": {"$ne": ObjectId(lead_id)},
+        })
+
+        if duplicate:
+            raise ValueError("Ce prospect existe déjà")
+
+    if "email" in update_data:
+        update_data["email"] = normalize_email(update_data["email"])
+        if not validate_email(update_data["email"]):
+            raise ValueError("Adresse email invalide")
+
+        duplicate = leads_collection.find_one({
+            "email": update_data["email"],
+            "_id": {"$ne": ObjectId(lead_id)},
+        })
+
+        if duplicate:
+            raise ValueError("Ce prospect existe déjà")
+
+    if "website" in update_data:
+        update_data["website"] = normalize_url(update_data["website"])
+        if not validate_url(update_data["website"]):
+            raise ValueError("URL du site web invalide")
+
+        duplicate = leads_collection.find_one({
+            "website": update_data["website"],
+            "_id": {"$ne": ObjectId(lead_id)},
+        })
+
+        if duplicate:
+            raise ValueError("Ce prospect existe déjà")
+
+    if "phone" in update_data:
+        update_data["phone"] = normalize_text(update_data["phone"])
+        if not validate_phone(update_data["phone"]):
+            raise ValueError("Numéro de téléphone invalide")
+
+    if "social_media" in update_data:
+        social_validation = validate_social_media(
+            update_data["social_media"]
+        )
+        if social_validation["invalid"]:
+            raise ValueError("Réseaux sociaux invalides")
+
+    update_data["updated_at"] = datetime.now(timezone.utc)
+
+    leads_collection.update_one(
+        {"_id": ObjectId(lead_id)},
+        {"$set": update_data},
+    )
+
+    updated = dict(existing)
+    updated.update(update_data)
+    updated["_id"] = str(updated["_id"])
+
+    return updated
 
 
 def get_leads():
