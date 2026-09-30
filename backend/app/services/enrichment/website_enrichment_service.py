@@ -116,9 +116,15 @@ class WebsiteEnrichmentService:
         )
 
         text_numbers = re.findall(
-            r'(?<![\d])\+?[0-9][0-9\s().-]{6,}[0-9](?![\d])',
+            r'(?<![\d])(?:\+?[0-9](?:[\s().-]*[0-9]){6,})(?![\d])',
             decoded_html,
         )
+
+        text_numbers = [
+            number
+            for number in text_numbers
+            if not re.fullmatch(r'\d{4}-\d{2}-\d{2}', number.strip())
+        ]
 
         candidates = [*text_numbers, *tel_numbers]
 

@@ -370,3 +370,23 @@ def test_enrich_website_returns_all_extracted_contacts():
             "youtube": [],
         },
     }
+
+
+def test_extract_phones_ignores_dates():
+    client = FakeHttpClient()
+    service = build_service(client)
+
+    html = """
+    <html>
+        <body>
+            Mise à jour : 2024-09-09
+            Téléphone : +261 20 22 642 33
+        </body>
+    </html>
+    """
+
+    result = service.extract_phones(html)
+
+    assert result == [
+        "+261 20 22 642 33",
+    ]
