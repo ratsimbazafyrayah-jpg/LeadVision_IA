@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 
 from app.schemas.lead import LeadCreate, LeadUpdate
 from app.services.lead_service import (
@@ -8,6 +8,7 @@ from app.services.lead_service import (
     update_lead,
 )
 from app.services.lead_qualification_service import qualify_lead
+from app.services.enrichment.lead_enrichment_service import enrich_lead
 
 
 router = APIRouter(
@@ -55,6 +56,34 @@ def update_single_lead(lead_id: str, lead: LeadUpdate):
         raise HTTPException(
             status_code=400,
             detail=str(error)
+        )
+
+
+@router.post("/{lead_id}/enrichment")
+def enrich_single_lead(
+    lead_id: str,
+    request: Request,
+):
+    try:
+        enrichment_service = request.app.state.website_enrichment
+
+        result = enrich_lead(
+            lead_id,
+            enrichment_service,
+        )
+
+        if result is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Lead introuvable",
+            )
+
+        return result
+
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
         )
 
 

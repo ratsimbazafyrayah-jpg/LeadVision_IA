@@ -14,6 +14,7 @@ from app.services.ai.ai_provider_factory import create_ai_provider
 from app.services.discovery.source_factory import build_discovery_sources
 from app.services.discovery.source_registry import DiscoverySourceRegistry
 from app.services.discovery.nominatim_geocoding import NominatimGeocodingService
+from app.services.enrichment.website_enrichment_service import WebsiteEnrichmentService
 
 
 @asynccontextmanager
@@ -32,6 +33,17 @@ async def lifespan(app: FastAPI):
 
     app.state.nominatim_geocoder = NominatimGeocodingService(
         http_client=nominatim_http_client,
+    )
+
+    website_enrichment_http_client = httpx.Client(
+        headers={
+            "User-Agent": "LeadVision_IA/1.0 (academic project)",
+            "Accept": "text/html,application/xhtml+xml",
+        }
+    )
+
+    app.state.website_enrichment = WebsiteEnrichmentService(
+        http_client=website_enrichment_http_client,
     )
 
     try:
@@ -63,6 +75,15 @@ async def lifespan(app: FastAPI):
 
         if nominatim_geocoder is not None:
             nominatim_geocoder.close()
+
+        website_enrichment = getattr(
+            app.state,
+            "website_enrichment",
+            None,
+        )
+
+        if website_enrichment is not None:
+            website_enrichment.close()
 
 
 app = FastAPI(
