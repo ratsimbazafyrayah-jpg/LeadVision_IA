@@ -123,7 +123,9 @@ class WebsiteEnrichmentService:
         text_numbers = [
             number
             for number in text_numbers
-            if not re.fullmatch(r'\d{4}-\d{2}-\d{2}', number.strip())
+            if not re.fullmatch(r'\d{4}-\d{2}-\d{2}(?:\s+\d{1,2})?', number.strip())
+            and not re.fullmatch(r'\d+(?:[.)]\s*\d+)+', number.strip())
+            and not re.fullmatch(r'\d+(?:\.\d+)+', number.strip())
         ]
 
         candidates = [*text_numbers, *tel_numbers]

@@ -390,3 +390,25 @@ def test_extract_phones_ignores_dates():
     assert result == [
         "+261 20 22 642 33",
     ]
+
+def test_extract_phones_ignores_numeric_fragments_and_dates():
+    client = FakeHttpClient()
+    service = build_service(client)
+
+    html = """
+    <html>
+        <body>
+            Coordonnées internes : 2.0.19.12
+            Donnée : 224) 100
+            Donnée : 130) 100
+            Mise à jour : 2025-02-06 12
+            Téléphone : +261 34 01 077 71
+        </body>
+    </html>
+    """
+
+    result = service.extract_phones(html)
+
+    assert result == [
+        "+261 34 01 077 71",
+    ]
